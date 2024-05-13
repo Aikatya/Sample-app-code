@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".CreateTaskPage">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="409dp"
+        android:layout_height="729dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <EditText
+            android:id="@+id/titleText"
+            android:layout_width="240dp"
+            android:layout_height="55dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="52dp"
+            android:ems="10"
+            android:hint="Title"
+            android:inputType="text"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/pageTitle" />
+
+        <EditText
+            android:id="@+id/dateText"
+            android:layout_width="240dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="40dp"
+            android:ems="10"
+            android:hint="Date"
+            android:inputType="date"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/titleText" />
+
+        <EditText
+            android:id="@+id/commentText"
+            android:layout_width="240dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="40dp"
+            android:ems="10"
+            android:gravity="start|top"
+            android:hint="Comment"
+            android:inputType="textMultiLine"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tagText" />
+
+        <Button
+            android:id="@+id/submitButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="80dp"
+            android:layout_marginTop="68dp"
+            android:onClick="onSubmitButton_Clicked"
+            android:text="Submit"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/commentText" />
+
+        <TextView
+            android:id="@+id/priorityText"
+            android:layout_width="67dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="50dp"
+            android:text=" Priority:"
+            android:textSize="18sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/dateText" />
+
+        <Button
+            android:id="@+id/increasePriorityButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="20dp"
+            android:onClick="onIncreasePriorityButton_Clicked"
+            android:text="+"
+            app:layout_constraintStart_toEndOf="@+id/priorityLevel"
+            app:layout_constraintTop_toTopOf="@+id/reducePriorityButton" />
+
+        <Button
+            android:id="@+id/reducePriorityButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="40dp"
+            android:onClick="onReducePriorityButton_Clicked"
+            android:text="-"
+            app:layout_constraintHorizontal_chainStyle="spread"
+            app:layout_constraintStart_toEndOf="@+id/priorityText"
+            app:layout_constraintTop_toBottomOf="@+id/dateText" />
+
+        <TextView
+            android:id="@+id/priorityLevel"
+            android:layout_width="8dp"
+            android:layout_height="29dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="50dp"
+            android:clickable="false"
+            android:contextClickable="false"
+            android:focusableInTouchMode="false"
+            android:linksClickable="false"
+            android:longClickable="false"
+            android:text="1"
+            android:textSize="18sp"
+            app:layout_constraintStart_toEndOf="@+id/reducePriorityButton"
+            app:layout_constraintTop_toBottomOf="@+id/dateText" />
+
+        <TextView
+            android:id="@+id/pageTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="143dp"
+            android:layout_marginTop="55dp"
+            android:text="Create a Task"
+            android:textSize="20sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <EditText
+            android:id="@+id/tagText"
+            android:layout_width="240dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="40dp"
+            android:ems="10"
+            android:hint="Tag"
+            android:inputType="text"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/reducePriorityButton" />
+
+        <Button
+            android:id="@+id/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="60dp"
+            android:layout_marginTop="68dp"
+            android:onClick="onDeleteButton_Clicked"
+            android:text="Delete"
+            app:layout_constraintStart_toEndOf="@+id/submitButton"
+            app:layout_constraintTop_toBottomOf="@+id/commentText" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
