@@ -1,2 +1,2 @@
 # Sample-app-code
-extract from code I wrote for a group project
+Extracts from code I wrote for a group project creating a to-da application with Andrid Studio.
