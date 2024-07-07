@@ -1,16 +1,19 @@
 package be.kuleuven.gt.todolist;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.CalendarView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -21,8 +24,11 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
 import com.prolificinteractive.materialcalendarview.CalendarDay;
+import com.prolificinteractive.materialcalendarview.DayViewDecorator;
+import com.prolificinteractive.materialcalendarview.DayViewFacade;
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView;
 import com.prolificinteractive.materialcalendarview.OnDateSelectedListener;
+import com.prolificinteractive.materialcalendarview.spans.DotSpan;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,21 +37,27 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
-public class CalendarPage extends AppCompatActivity implements OnTaskCheckedListener, useOfRecyclerView {
-
+/**
+ * CalendarPage displays a calendar with all days with events highlighted.
+ * When a calendar date is selected, all tasks for the day are displayed in a RecyclerView
+ */
+public class CalendarPage extends AppCompatActivity implements OnTaskInteractionListener, IJSONResponseListener {
     private User user;
     private String dateSelected;
     private MaterialCalendarView calendarView;
     private RecyclerView toDoListView;
-    private List<ToDo> toDoList = new ArrayList<>();;
-    private ToDo selectedTask = null;
+    private List<ToDo> toDoList = new ArrayList<>();
+    private HashSet<String> datesToMark;
+    private ToDoListDatabaseConnection databaseConnection;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_calendar);
+        databaseConnection = new ToDoListDatabaseConnection(this);
 
         user = getIntent().getParcelableExtra("user");
         @SuppressLint({"NewApi", "LocalSuppress"}) LocalDate lt = LocalDate.now();
@@ -55,100 +67,88 @@ public class CalendarPage extends AppCompatActivity implements OnTaskCheckedList
         ToDoAdapter adapter = new ToDoAdapter(toDoList, this);
         toDoListView.setAdapter(adapter);
         toDoListView.setLayoutManager(new LinearLayoutManager(this));
+
+        datesToMark = new HashSet<>();
+        findAllEventDays(datesToMark);
+        calendarView.addDecorator(new DayViewDecorator() {
+            @Override
+            public boolean shouldDecorate(CalendarDay day) {
+                String stringDay = dayToString(day);
+                return datesToMark.contains(stringDay);
+            }
+
+            @Override
+            public void decorate(DayViewFacade view) {
+                view.addSpan(new DotSpan(5, Color.parseColor("#FF0000")));
+            }
+        });
+
+        String birthday = user.getBirthday();
+        calendarView.addDecorator(new DayViewDecorator() {
+            @Override
+            public boolean shouldDecorate(CalendarDay day) {
+                String stringDay = dayToString(day);
+                if (birthday!=null){
+//                    checks month and day of birthday
+                    return birthday.regionMatches(4, stringDay, 4, 6);
+                }
+                else {
+                    return false;
+                }
+            }
+
+            @Override
+            public void decorate(DayViewFacade view) {
+                Resources res = getResources();
+                Drawable drawable = ResourcesCompat.getDrawable(res, R.drawable.balloon, null);
+                assert drawable != null;
+                view.setBackgroundDrawable(drawable);
+            }
+        });
+
         calendarListener();
     }
-
     public void calendarListener(){
         calendarView.setOnDateChangedListener(
                         new OnDateSelectedListener() {
                             @Override
                             public void onDateSelected(@NonNull MaterialCalendarView widget, @NonNull CalendarDay date, boolean selected) {
-                                // Listener has one method where it will get the date
-                                    // Store the value of date with format in String
-                                dateSelected = String.valueOf(date.getYear());
-                                if (date.getMonth() <10){
-                                    dateSelected+="-0" + (date.getMonth());
-                                }
-                                else {
-                                    dateSelected+="-" + (date.getMonth());
-                                }
-                                if (date.getDay() <10){
-                                    dateSelected+="-0" + (date.getDay());
-                                }
-                                else {
-                                    dateSelected+="-" + (date.getDay());
-                                }
+//                                Listener has one method where it will get the date
+//                                Store the value of date with format in String
+                                dateSelected = dayToString(date);
 //                                returns JSON with list of uncompleted tasks ordered by increasing priority
-                                contactDatabase("https://studev.groept.be/api/a23PT205/getTasksByDay/"+user.getUserID()+"/"+dateSelected, "update task list");
+                                databaseConnection.contactDatabase("https://studev.groept.be/api/a23PT205/getTasksByDay/"+user.getUserID()+"/"+dateSelected,
+                                        "update task list");
                             }
                         }
                         );
     }
-
     public void onListButton_Clicked(View Caller){
         Intent intent = new Intent(CalendarPage.this, Show_ToDo.class);
         intent.putExtra("user", user);
         startActivity(intent);
     }
-
-    /** This is an alternative to the method in Show_ToDo. Instead of deleting completed tasks, they are marked as completed in the database and not displayed.
-     * It would then be possible to implement a page with completed tasks to avoid having to rewrite everything if a task needs to be done again
-     * If this is not necessary, can be replaced with the same method as in Show_ToDo
-     */
+    @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onTaskChecked(ToDo task) throws UnsupportedEncodingException {
         String encodedTitle = URLEncoder.encode(task.getTitle(), "UTF-8");
-        contactDatabase("https://studev.groept.be/api/a23PT205/markTaskCompeted/"+user.getUserID()+"/"+encodedTitle, "mark task as completed");
+        databaseConnection.contactDatabase("https://studev.groept.be/api/a23PT205/markTaskCompeted/"+user.getUserID()+"/"+encodedTitle,
+                "mark task as completed");
         toDoList.remove(task);
         toDoListView.getAdapter().notifyDataSetChanged();
     }
-    private void contactDatabase(String QUEUE_URL, String actionPerformed) {
-        RequestQueue requestQueue = Volley.newRequestQueue(this);
-        JsonArrayRequest queueRequest = new JsonArrayRequest(
-                Request.Method.GET,
-                QUEUE_URL,
-                null,
-                new Response.Listener<JSONArray>() {
-                    @Override
-                    public void onResponse(JSONArray response) {
-                        if (actionPerformed.equals("update task list")) {
-                            updateTaskList(response);
-                        }
-                        else if (actionPerformed.equals("find by title")) {
-                            getTaskFromDB(response);
-                        }
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(
-                                CalendarPage.this,
-                                "Unable to contact database",
-                                Toast.LENGTH_LONG).show();
-                    }
-                });
-        requestQueue.add(queueRequest);
-    }
-
-    private void getTaskFromDB(JSONArray response) {
+    private void getAllDates(JSONArray response) {
         try {
-            selectedTask = new ToDo(response.getJSONObject(0));
+            datesToMark.clear();
+            for (int i = 0; i < response.length(); i++) {
+                datesToMark.add(response.getJSONObject(i).getString("dueDate"));
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        Intent intent = new Intent(CalendarPage.this, CreateTaskPage.class);
-        intent.putExtra("user", user);
-        if (selectedTask != null){
-            intent.putExtra("title", selectedTask.getTitle());
-            intent.putExtra("date", selectedTask.getDate());
-            intent.putExtra("priority", selectedTask.getPriority());
-            intent.putExtra("tag", selectedTask.getTitle());
-            intent.putExtra("comment", selectedTask.getComment());
-        }
-        startActivity(intent);
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void updateTaskList(JSONArray response) {
         try {
             toDoList.clear();
@@ -168,11 +168,52 @@ public class CalendarPage extends AppCompatActivity implements OnTaskCheckedList
         startActivity(intent);
     }
 
-
-    //need to implement somewhere else, this will not work in Show_ToDo
-    public void onTask_Selected(View Caller){
-        String title ="test"; //needs to get title from recycler view
-        contactDatabase("https://studev.groept.be/api/a23PT205/getTaskByTitle/"+title+"/"+user.getUserID(), "find by title");
+    public void onTaskSelected(ToDo todo){
+        Intent intent = new Intent(CalendarPage.this, CreateTaskPage.class);
+        intent.putExtra("user", user);
+        if (todo != null){
+            intent.putExtra("title", todo.getTitle());
+            intent.putExtra("date", todo.getDate());
+            intent.putExtra("priority", todo.getPriority());
+            intent.putExtra("tag", todo.getTag());
+            intent.putExtra("comment", todo.getComment());
+            intent.putExtra("taskID", todo.getTaskID());
+        }
+        startActivity(intent);
     }
 
+    private String dayToString(CalendarDay day) {
+        StringBuilder date = new StringBuilder(String.valueOf(day.getYear()));
+        date.append(day.getMonth() <10? "-0"+day.getMonth(): "-"+day.getMonth());
+        date.append(day.getDay() <10? "-0"+day.getDay(): "-"+day.getDay());
+        return date.toString();
+    }
+
+    private void findAllEventDays(HashSet<String> datesToMark) {
+        databaseConnection.contactDatabase("https://studev.groept.be/api/a23PT205/getAllDaysWithTasks/"+user.getUserID(),
+                "find all days with tasks");
+    }
+
+    @Override
+    public void processResponse(JSONArray response, String actionPerformed) {
+        if (actionPerformed.equals("update task list")) {
+            updateTaskList(response);
+        }
+        else if (actionPerformed.equals("find all days with tasks")) {
+            getAllDates(response);
+        }
+    }
+
+    @Override
+    public void errorResponse(String error) {
+        Toast.makeText(
+                this,
+                "Unable to communicate with the server",
+                Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public Context getContext() {
+        return this;
+    }
 }
